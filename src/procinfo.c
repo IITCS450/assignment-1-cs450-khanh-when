@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
 
 static void usage(const char *a) {
@@ -22,7 +23,7 @@ static int isnum(const char *s) {
 int proc_stats(char *pid, char arr[15][20]);
 
 // retrieve /proc/<pid>/cmdline info
-int proc_cmdline(char *pid, char *cmdline);
+int proc_cmdline(char *pid, char *cmdline, int size);
 
 // retrieve /proc/<pid>/status info
 int proc_status(char *pid, char *VmRSS);
@@ -34,27 +35,28 @@ int main(int argc, char *argv[]) {
 	usage(argv[0]);
     }
 
+    // stat args 
+    char args[6][20] = {0};
+    
     char *pid = argv[1];
-    printf("(PID: %s)\n", pid);
+    // printf("(PID: %s)\n", pid);
 
-    char stats[15][20] = {0};
+    char stats[39][20] = {0};
     proc_stats(pid, stats);
-    for (int i = 0; i < 15; i++) printf("%d: %s\n", i+1, stats[i]);
+    //for (int i = 0; i < 39; i++) printf("%d: %s\n", i+1, stats[i]);
 
     char VmRSS[10] = "";
     proc_status(pid, VmRSS);
-    for (int i = 0; i < strlen(VmRSS); i++) printf("%d. %c\n", i+1, VmRSS[i]);
-
-    char args[6][20] = {0};
+    //for (int i = 0; i < strlen(VmRSS); i++) printf("%d. %c\n", i+1, VmRSS[i]);
 
     char cmdline[20] = "";
-    proc_cmdline(pid, cmdline);
+    proc_cmdline(pid, cmdline, sizeof(cmdline));
 
     // (1) PID
     strcpy(args[0], stats[0]);
     printf("PID:%s\n", args[0]);
 
-    // (3) state
+    // (3) STATE
     strcpy(args[1], stats[2]);
     printf("State:%s\n", args[1]);
 
@@ -62,18 +64,21 @@ int main(int argc, char *argv[]) {
     strcpy(args[2], stats[3]);
     printf("PPID:%s\n", args[2]);
     
-    // (2) CMD
-    // strcpy(args[0], stats[0]);
+    // CMD
     printf("Cmd:%s\n", cmdline);
 
-    // (1) Last Executed CPU | CPU Time (User + System)
-    // strcpy(args[0], stats[0]);
-    printf("CPU: HELLO!!\n");
+    // Last Executed CPU | CPU Time (User + System)
+    strcpy(args[3], stats[38]);
+    
+    long utime = atol(stats[12]); 
+    long stime = atol(stats[13]);
+    long sysHz = sysconf(_SC_CLK_TCK);
+
+    float cpu_time = (float)(utime + stime) / sysHz;
+    printf("CPU:%s %.3f\n", args[3], cpu_time);
     
     // VmRSS
     printf("VmRSS:%s\n", VmRSS);
-
-
 
     return 0;
 }
@@ -96,7 +101,6 @@ int proc_status(char *pid, char *VmRSS){
     char buffer[1024] = {0};
 
     if (pFile == NULL) {
-	printf("%s\n", cmd);
 	perror("fopen");
 	return 1;
     }
@@ -105,7 +109,7 @@ int proc_status(char *pid, char *VmRSS){
 	fgets(buffer, sizeof(buffer), pFile);
     }
 
-    printf("Buffer: %s\n", buffer);
+    // printf("Buffer: %s\n", buffer);
     
     int idx = 0;
     len = strlen(buffer);
@@ -134,10 +138,10 @@ int proc_stats(char *pid, char arr[15][20]) {
     strcat(cmd, pid);
     strcat(cmd, suffix);
 
-    printf("str: %s | len: %ld\n", pre, strlen(pre));
-    printf("str: %s | len: %ld\n", suffix, strlen(suffix));
-    printf("str: %s | len: %ld\n", pid, strlen(pid));
-    printf("str: %s | len: %d\n", cmd, len);
+    // printf("str: %s | len: %ld\n", pre, strlen(pre));
+    // printf("str: %s | len: %ld\n", suffix, strlen(suffix));
+    // printf("str: %s | len: %ld\n", pid, strlen(pid));
+    // printf("str: %s | len: %d\n", cmd, len);
 
     FILE *pFile = fopen(cmd, "r");
     char buffer[1024] = {0};
@@ -151,7 +155,7 @@ int proc_stats(char *pid, char arr[15][20]) {
     char *tok = strtok(buffer, " ");
     strcpy(arr[0], tok);
 
-    for (int i = 1; i < 15; i++) {
+    for (int i = 1; i < 39; i++) {
 	tok = strtok(NULL, " ");
 	strcpy(arr[i], tok);
     }
@@ -162,7 +166,7 @@ int proc_stats(char *pid, char arr[15][20]) {
 }
 
 // retrieve /proc/<pid>/cmdline info 
-int proc_cmdline(char *pid, char *cmdline) {
+int proc_cmdline(char *pid, char *cmdline, int size) {
 
     // syntax for command
     const char *pre = "/proc/";
@@ -185,8 +189,8 @@ int proc_cmdline(char *pid, char *cmdline) {
     }
 
     fgets(buffer, sizeof(buffer), pFile);
-    strncpy(cmdline, buffer, sizeof(cmdline) - 1);
-    cmdline[sizeof(cmdline) - 1] = '\0';
+    strncpy(cmdline, buffer, size - 1);
+    cmdline[size-1] = '\0';
    
     fclose(pFile);
 
