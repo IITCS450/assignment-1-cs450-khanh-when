@@ -75,11 +75,12 @@ int main(int argc, char *argv[]) {
 
 	clock_gettime(CLOCK_MONOTONIC, &end);
 
-	if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-	    // printf("Child exit with code 0.\n");
+	
+	if (WIFEXITED(status)) {
+	    printf("pid=%d elasped=%.3f exit=%d\n", rc, d(start, end), WEXITSTATUS(status));
+	} else {
+	    printf("pid=%d elasped=%.3f signal=%d\n", rc, d(start, end), WTERMSIG(status));
 	}
-
-	printf("pid=%d elasped=%.3f exit=%d\n", rc, d(start, end), status);
 
     }
 

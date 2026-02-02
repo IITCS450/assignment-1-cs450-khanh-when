@@ -42,7 +42,13 @@ int main(int argc, char *argv[]) {
     // printf("(PID: %s)\n", pid);
 
     char stats[39][20] = {0};
-    proc_stats(pid, stats);
+    int valid_pid = proc_stats(pid, stats);
+
+    if (valid_pid == 1) {
+	printf("Invalid PID\n");
+	return 1;
+    }
+
     //for (int i = 0; i < 39; i++) printf("%d: %s\n", i+1, stats[i]);
 
     char VmRSS[10] = "";
@@ -101,7 +107,6 @@ int proc_status(char *pid, char *VmRSS){
     char buffer[1024] = {0};
 
     if (pFile == NULL) {
-	perror("fopen");
 	return 1;
     }
 
@@ -147,7 +152,6 @@ int proc_stats(char *pid, char arr[15][20]) {
     char buffer[1024] = {0};
 
     if (pFile == NULL) {
-	perror("fopen");
 	return 1;
     }
 
@@ -184,7 +188,6 @@ int proc_cmdline(char *pid, char *cmdline, int size) {
     char buffer[1024] = {0};
 
     if (pFile == NULL) {
-	perror("fopen");
 	return 1;
     }
 
